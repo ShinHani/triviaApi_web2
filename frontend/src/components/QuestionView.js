@@ -6,8 +6,8 @@ import Search from './Search';
 import $ from 'jquery';
 
 class QuestionView extends Component {
-  constructor(props) {
-    super(props);
+  constructor() {
+    super();
     this.state = {
       questions: [],
       page: 1,

@@ -99,7 +99,8 @@ GET '/api/v1.0/categories'
 '6' : "Sports"}
 
 ```
-
+## To run trivia.psql file
+psql -U postgres -d trivia -f trivia.psql
 
 ## Testing
 To run the tests, run
