@@ -14,9 +14,9 @@ class TriviaTestCase(unittest.TestCase):
         """Define test variables and initialize app."""
         self.app = create_app()
         self.client = self.app.test_client
-        self.database_name = "trivia_test"
+        self.database_name = os.getenv('DB_TEST_NAME')
         self.database_path = "postgresql://{}/{}".format(
-            'postgres:21062022@localhost:5432', self.database_name)
+            os.getenv('DB_PATH'), self.database_name)
         setup_db(self.app, self.database_path)
 
         # binds the app to the current context
@@ -40,6 +40,13 @@ class TriviaTestCase(unittest.TestCase):
         data_json = response.get_json()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data_json['success'], True)
+
+    def test_get_questions_failed(self):
+        response = self.client().get('/questions?page=1000')
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Page not found')
 
     def test_create_question_success(self):
         new_question = {
@@ -90,6 +97,12 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data_json['success'], True)
 
+    def test_get_categories_fail(self):
+        res = self.client().delete('/categories')
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 405)
+        self.assertEqual(data["success"], False)
+
     def test_get_questions_base_on_category_not_found_id(self):
         # Change number 200 to a invalid id for this test case to pass
         response = self.client().get('/categories/200/questions')
@@ -104,6 +117,42 @@ class TriviaTestCase(unittest.TestCase):
         data_json = response.get_json()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data_json['success'], True)
+
+    def test_search_questions(self):
+        # send post request with search term
+        response = self.client().post(
+            '/questions', json={'searchTerm': 'Washington'})
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(len(data['questions']), 1)
+        self.assertEqual(data['questions'][0]['id'], 23)
+
+    def test_404_if_search_questions_fails(self):
+        response = self.client().post(
+            '/questions', json={'searchTerm': 'abcdefghijk'})
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Question not found!')
+
+    def test_quiz_game(self):
+        response = self.client().post('/quizzes',
+                                      json={'previous_questions': [20, 21], 'quiz_category': {'type': 'Science', 'id': '1'}})
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        self.assertEqual(data['question']['category'], 1)
+        self.assertNotEqual(data['question']['id'], 20)
+        self.assertNotEqual(data['question']['id'], 21)
+
+    def test_quiz_fail(self):
+        response = self.client().post('/quizzes', json={})
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'bad request')
 
 
 # Make the tests conveniently executable
